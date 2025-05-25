@@ -1,4 +1,5 @@
 import tempfile
+import time
 from flask import Flask, request, jsonify
 import pickle
 import cv2
