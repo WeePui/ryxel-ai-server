@@ -219,44 +219,72 @@ def nsfw_worker():
             image_urls = data.get('images')
 
             is_valid = True  # Assume the review is valid until an invalid image is found
-            detected = []
+            all_detections = []
+
+            # Define truly NSFW categories that should trigger rejection
+            nsfw_categories = [
+                "BUTTOCKS_EXPOSED",
+                "FEMALE_BREAST_EXPOSED", 
+                "FEMALE_GENITALIA_EXPOSED",
+                "MALE_GENITALIA_EXPOSED",
+                "ANUS_EXPOSED"
+            ]
 
             for image_url in image_urls:
                 # Download the image from the Cloudinary link
                 response = requests.get(image_url, stream=True)
                 if response.status_code != 200:
-                    # If an image cannot be downloaded, consider it invalid
-                    is_valid = False
-                    break
+                    # If an image cannot be downloaded, skip it but don't mark as NSFW
+                    print(f"Failed to download image: {image_url}")
+                    continue
 
                 # Save the downloaded image to a temporary file
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
                     tmp_file.write(response.content)
                     temp_image_path = tmp_file.name
 
-                # Run NSFW detection on this image
-                detections = detect_nsfw(temp_image_path)
-                os.remove(temp_image_path)  # Clean up the temporary file
-
-                if detections:
-                    is_valid = False
-                    detected.extend(detections[0])
-                    break
+                try:
+                    # Run NSFW detection on this image
+                    detections = detect_nsfw(temp_image_path)
+                    
+                    # Check if any detections are actually NSFW with high confidence
+                    for detection in detections:
+                        class_name = detection.get("class")
+                        score = detection.get("score", 0)
+                        
+                        # Only flag as NSFW if it's a truly inappropriate category with high confidence
+                        if class_name in nsfw_categories and score >= 0.6:
+                            is_valid = False
+                            all_detections.append(detection)
+                            break
+                    
+                    # If this image was flagged as NSFW, stop processing other images
+                    if not is_valid:
+                        break
+                        
+                except Exception as e:
+                    print(f"Error processing image {image_url}: {str(e)}")
+                    continue
+                finally:
+                    # Clean up the temporary file
+                    if os.path.exists(temp_image_path):
+                        os.remove(temp_image_path)
 
             # Notify the main server
             post_payload = {
                 "reviewId": review_id,
-                "detected": detected,
+                "detected": all_detections,
                 "isValid": is_valid
             }
-            print(post_payload)
+            print(f"NSFW Detection Result: {post_payload}")
             requests.post(main_server_url, json=post_payload)
 
         except Exception as e:
-            # Notify the main server in case of an error
+            print(f"Error in NSFW worker: {str(e)}")
+            # Notify the main server in case of an error, but don't delete the review
             error_payload = {
-                "reviewId": data.get('reviewId'),
-                "isValid": False,
+                "reviewId": data.get('reviewId', 'unknown'),
+                "isValid": True,  # Default to valid if there's an error
                 "error": str(e)
             }
             requests.post(main_server_url, json=error_payload)
