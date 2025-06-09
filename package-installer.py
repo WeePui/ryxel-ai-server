@@ -5,7 +5,7 @@ import sys
 # Danh sách các package cần thiết
 packages = [
     "flask", "opencv-python", "numpy", "onnxruntime", "pandas", "requests",
-    "scikit-learn", "underthesea", "mlxtend"
+    "scikit-learn", "underthesea", "mlxtend", "python-dotenv"
 ]
 def check_and_install_packages(package_list):
     """Kiểm tra và cài đặt các package nếu chưa có."""

@@ -19,6 +19,10 @@ from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import apriori, association_rules
 import json
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Sample data sản phẩm (bạn có thể thay thế hoặc load từ cơ sở dữ liệu)
 PRODUCTS_PATH = Path(__file__).parent / "products.json"
@@ -116,7 +120,7 @@ target_tag = [
 ]
 
 
-main_server_url = "http://localhost:8000/api/v1/api-callback/nsfw_detected"
+main_server_url = os.getenv("MAIN_SERVER_URL", "http://localhost:8000/api/v1/api-callback/nsfw_detected")
 onnx_session = onnxruntime.InferenceSession(
     MODEL_PATH,
     providers=onnxruntime.get_available_providers()
@@ -379,4 +383,5 @@ def recommend():
     }), 200
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv("PORT", 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)

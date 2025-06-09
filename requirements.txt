@@ -1,0 +1,10 @@
+flask
+opencv-python
+numpy
+onnxruntime
+pandas
+requests
+scikit-learn
+underthesea
+mlxtend
+python-dotenv
