@@ -382,6 +382,43 @@ def recommend():
         "similars": recommendations
     }), 200
 
+@app.route('/ping', methods=['GET'])
+def ping():
+    """Health check endpoint"""
+    return jsonify({
+        "status": "success",
+        "message": "Ryxel AI Server is running",
+        "timestamp": time.time(),
+        "uptime": "OK"
+    }), 200
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Detailed health check endpoint"""
+    try:
+        # Check if essential components are loaded
+        model_loaded = onnx_session is not None
+        products_loaded = len(products) > 0
+        recommender_loaded = recommender is not None
+        
+        return jsonify({
+            "status": "healthy",
+            "message": "All systems operational",
+            "timestamp": time.time(),
+            "components": {
+                "onnx_model": model_loaded,
+                "products_data": products_loaded,
+                "recommender": recommender_loaded,
+                "total_products": len(products)
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "status": "unhealthy",
+            "message": f"Health check failed: {str(e)}",
+            "timestamp": time.time()
+        }), 500
+
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
